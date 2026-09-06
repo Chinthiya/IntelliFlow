@@ -700,3 +700,351 @@
 .back-button:active {
   transform: translateX(-3px);
 }
+
+.ai-findings-panel {
+  margin-top: 18px;
+}
+
+.finding-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.finding-counts span {
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.finding-counts .critical,
+.finding-group h4.critical {
+  color: #b42318;
+}
+
+.finding-counts .critical {
+  background: #fff0f0;
+}
+
+.finding-counts .warning,
+.finding-group h4.warning {
+  color: #a15c00;
+}
+
+.finding-counts .warning {
+  background: #fff4e5;
+}
+
+.finding-counts .info,
+.finding-group h4.info {
+  color: #8b6800;
+}
+
+.finding-counts .info {
+  background: #fff9d9;
+}
+
+.finding-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.finding-group h4 {
+  margin: 0 0 9px;
+  font-size: 12px;
+}
+
+.finding-group {
+  display: grid;
+  gap: 9px;
+}
+
+.ai-finding-card {
+  border: 1px solid #e6eaee;
+  border-left: 4px solid;
+  border-radius: 9px;
+  padding: 14px;
+  background: #fff;
+}
+
+.ai-finding-card.critical {
+  border-left-color: #d64545;
+}
+
+.ai-finding-card.warning {
+  border-left-color: #e59a19;
+}
+
+.ai-finding-card.info {
+  border-left-color: #d1a800;
+}
+
+.finding-card-header,
+.finding-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.finding-severity,
+.finding-action small,
+.finding-recommendation small {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.ai-finding-card.critical .finding-severity {
+  color: #b42318;
+}
+
+.ai-finding-card.warning .finding-severity {
+  color: #a15c00;
+}
+
+.ai-finding-card.info .finding-severity {
+  color: #8b6800;
+}
+
+.ai-finding-card h5 {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.ai-finding-card p {
+  margin: 8px 0 12px;
+  color: #64707a;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.finding-action {
+  align-items: flex-end;
+  border-top: 1px solid #edf0f2;
+  padding-top: 10px;
+}
+
+.finding-action small {
+  color: #8a949c;
+}
+
+.finding-action strong {
+  color: #36424d;
+  font-size: 10px;
+  text-align: right;
+}
+
+.no-findings {
+  margin: 0;
+  color: #8a949c;
+  font-size: 11px;
+}
+
+.finding-recommendation {
+  margin-top: 20px;
+  border-radius: 10px;
+  padding: 15px;
+}
+
+.finding-recommendation strong,
+.finding-recommendation p {
+  display: block;
+}
+
+.finding-recommendation strong {
+  margin-top: 5px;
+  font-size: 15px;
+}
+
+.finding-recommendation p {
+  margin: 5px 0 0;
+  font-size: 11px;
+}
+
+.finding-recommendation.critical {
+  background: #fff0f0;
+  color: #9d241a;
+}
+
+.finding-recommendation.warning {
+  background: #fff4e5;
+  color: #8f5400;
+}
+
+.finding-recommendation.approved {
+  background: #eaf8f1;
+  color: #16794c;
+}
+
+.current-review-panel {
+  border-top: 3px solid #e59a19;
+}
+
+.current-review-card {
+  border: 1px solid #e5e9ee;
+  border-radius: 12px;
+  padding: 20px;
+  background: #fbfcfd;
+}
+
+.current-review-header,
+.suggested-decision,
+.current-review-actions,
+.review-history-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.current-review-header .review-file span,
+.suggested-decision small,
+.review-history-card small {
+  display: block;
+  color: #7b8792;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.analysis-status {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #fff4df;
+  color: #a15c00;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.finding-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.finding-card {
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.finding-card strong,
+.finding-card span {
+  display: block;
+}
+
+.finding-card strong {
+  font-size: 25px;
+}
+
+.finding-card span {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.finding-card.critical,
+.history-decision.critical {
+  background: #fff0f0;
+  color: #b42318;
+}
+
+.finding-card.warning,
+.history-decision.warning {
+  background: #fff4e5;
+  color: #a15c00;
+}
+
+.finding-card.info {
+  background: #fff9d9;
+  color: #8b6800;
+}
+
+.history-decision.approved {
+  background: #eaf8f1;
+  color: #16794c;
+}
+
+.suggested-decision {
+  padding: 15px;
+  border-radius: 10px;
+  background: #fff8ed;
+}
+
+.suggested-decision strong {
+  display: block;
+  margin-top: 5px;
+  color: #7d4c00;
+  font-size: 14px;
+}
+
+.current-review-actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.clarification-button {
+  border: 1px solid #e9b45a;
+  border-radius: 7px;
+  padding: 11px 16px;
+  background: #fff4df;
+  color: #9a5b00;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.review-history-panel {
+  margin-top: 18px;
+}
+
+.review-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.review-history-card {
+  padding: 15px;
+  border: 1px solid #e7ebef;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.review-history-card > div {
+  flex: 1;
+}
+
+.review-history-card strong {
+  display: block;
+  margin-top: 5px;
+  color: #34404c;
+  font-size: 11px;
+}
+
+.history-decision {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .finding-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .current-review-header,
+  .suggested-decision,
+  .current-review-actions,
+  .review-history-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -477,113 +477,7 @@ function Process({
 ========================= */
 
 function Decision({ result, setActive }) {
-  const [detail, setDetail] = useState(result);
-  const [loading, setLoading] = useState(!result);
-
-  useEffect(() => {
-    if (result) {
-      setDetail(result);
-      setLoading(false);
-      return;
-    }
-
-    const loadLatest = async () => {
-      try {
-        const response = await fetch(
-          `${API}/api/audits`
-        );
-
-        const data = await response.json();
-
-        if (
-          data.success &&
-          data.audits &&
-          data.audits.length > 0
-        ) {
-          const latest = data.audits[0];
-
-          const detailResponse =
-            await fetch(
-              `${API}/api/audits/${latest._id}`
-            );
-
-          const detailData =
-            await detailResponse.json();
-
-          if (detailData.success) {
-            const audit =
-              detailData.audit;
-
-            setDetail({
-              filename: audit.filename,
-
-              extractedText:
-                audit.extractedText,
-
-              fields:
-                audit.fields || {},
-
-              validation: {
-                checks:
-                  audit.validationChecks || {},
-
-                passed:
-                  audit.validationPassed || 0,
-
-                total:
-                  audit.validationTotal || 0,
-
-                valid:
-                  audit.validationValid || false
-              },
-
-              confidence:
-                audit.confidence,
-
-              decision: {
-                status:
-                  audit.decision,
-
-                reason:
-                  audit.decision ===
-                  "AUTO-PROCESS"
-                    ? "All required fields passed validation and confidence is above threshold."
-                    : "Validation or confidence threshold requires human verification."
-              }
-            });
-          }
-        }
-      } catch (error) {
-        console.error(
-          "Latest decision loading failed:",
-          error
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadLatest();
-  }, [result]);
-
-  if (loading) {
-    return (
-      <div className="content empty">
-        <Loader2
-          className="spinner"
-          size={42}
-        />
-
-        <h3>
-          Loading latest decision...
-        </h3>
-
-        <p>
-          Retrieving the latest processed document.
-        </p>
-      </div>
-    );
-  }
+  const detail = result;
 
   if (!detail) {
     return (
@@ -591,12 +485,13 @@ function Decision({ result, setActive }) {
         <ClipboardCheck size={42} />
 
         <h3>
-          No documents processed yet
+          No current document analysis
         </h3>
 
         <p>
-          Process a document to see the
-          intelligent decision.
+          Upload a document to see its current
+          analysis. Earlier reviews are available
+          in Review History.
         </p>
 
         <button
@@ -614,6 +509,9 @@ function Decision({ result, setActive }) {
   const auto =
     detail.decision.status ===
     "AUTO-PROCESS";
+
+  const findings = getAiFindings(detail);
+  const recommendation = getFindingRecommendation(findings);
 
   return (
     <div className="content">
@@ -652,6 +550,11 @@ function Decision({ result, setActive }) {
           </strong>
         </div>
       </div>
+
+      <AiFindingsPanel
+        findings={findings}
+        recommendation={recommendation}
+      />
 
       <div className="result-grid">
         <section className="panel">
@@ -799,12 +702,89 @@ function Decision({ result, setActive }) {
   );
 }
 
+function AiFindingsPanel({ findings, recommendation }) {
+  const groups = [
+    { severity: "critical", label: "Critical" },
+    { severity: "warning", label: "Warnings" },
+    { severity: "info", label: "Info" }
+  ];
+
+  return (
+    <section className="panel ai-findings-panel">
+      <div className="panel-head">
+        <div>
+          <p className="eyebrow">AI FINDINGS</p>
+          <h3>Document Risk Analysis</h3>
+        </div>
+
+        <div className="finding-counts">
+          {groups.map((group) => (
+            <span key={group.severity} className={group.severity}>
+              {findings.filter((finding) => finding.severity === group.severity).length} {group.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="finding-groups">
+        {groups.map((group) => {
+          const groupFindings = findings.filter(
+            (finding) => finding.severity === group.severity
+          );
+
+          return (
+            <div className="finding-group" key={group.severity}>
+              <h4 className={group.severity}>{group.label}</h4>
+              {groupFindings.length > 0 ? (
+                groupFindings.map((finding) => (
+                  <AiFindingCard key={finding.title} finding={finding} />
+                ))
+              ) : (
+                <p className="no-findings">No {group.label.toLowerCase()} detected.</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className={`finding-recommendation ${recommendation.tone}`}>
+        <div>
+          <small>AI RECOMMENDATION</small>
+          <strong>{recommendation.decision}</strong>
+          <p>{recommendation.reason}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AiFindingCard({ finding }) {
+  return (
+    <article className={`ai-finding-card ${finding.severity}`}>
+      <div className="finding-card-header">
+        <div>
+          <span className="finding-severity">{finding.severity}</span>
+          <h5>{finding.title}</h5>
+        </div>
+      </div>
+      <p>{finding.description}</p>
+      <div className="finding-action">
+        <small>SUGGESTED ACTION</small>
+        <strong>{finding.action}</strong>
+      </div>
+    </article>
+  );
+}
+
 /* =========================
    REVIEW QUEUE
 ========================= */
 
 function ReviewQueue() {
   const [reviews, setReviews] =
+    useState([]);
+
+  const [history, setHistory] =
     useState([]);
 
   const [selected, setSelected] =
@@ -815,16 +795,23 @@ function ReviewQueue() {
 
   const loadReviews = async () => {
     try {
-      const response =
-        await fetch(
-          `${API}/api/reviews`
-        );
+      const [reviewResponse, auditResponse] =
+        await Promise.all([
+          fetch(`${API}/api/reviews`),
+          fetch(`${API}/api/audits`)
+        ]);
 
-      const data =
-        await response.json();
+      const [reviewData, auditData] =
+        await Promise.all([
+          reviewResponse.json(),
+          auditResponse.json()
+        ]);
 
-      setReviews(
-        data.reviews || []
+      setReviews(reviewData.reviews || []);
+      setHistory(
+        (auditData.audits || []).filter(
+          (audit) => isResolvedReview(audit.decision)
+        )
       );
     } catch (error) {
       console.error(
@@ -888,7 +875,12 @@ function ReviewQueue() {
         if (data.success) {
           setSelected(null);
 
-          window.history.back();
+          if (
+            window.history.state?.page ===
+            "review-detail"
+          ) {
+            window.history.back();
+          }
 
           loadReviews();
         }
@@ -922,7 +914,7 @@ function ReviewQueue() {
 
   return (
     <div className="content">
-      <section className="panel">
+      <section className="panel current-review-panel">
         <div className="panel-head">
           <div>
             <p className="eyebrow">
@@ -930,7 +922,7 @@ function ReviewQueue() {
             </p>
 
             <h3>
-              Review Queue
+              Current Review
             </h3>
           </div>
 
@@ -958,97 +950,18 @@ function ReviewQueue() {
             </span>
           </div>
         ) : (
-          <div className="review-list">
-            {reviews.map(
-              (review) => (
-                <div
-                  className="review-card"
-                  key={review._id}
-                >
-                  <div className="review-file">
-                    <div className="review-icon">
-                      <FileText size={20} />
-                    </div>
-
-                    <div>
-                      <strong>
-                        {review.filename}
-                      </strong>
-
-                      <small>
-                        {
-                          review.applicationId
-                        }
-                      </small>
-                    </div>
-                  </div>
-
-                  <div className="review-detail">
-                    <span>
-                      Customer
-                    </span>
-
-                    <strong>
-                      {
-                        review.customerName
-                      }
-                    </strong>
-                  </div>
-
-                  <div className="review-detail">
-                    <span>
-                      Confidence
-                    </span>
-
-                    <strong className="warning-text">
-                      {
-                        review.confidence
-                      }%
-                    </strong>
-                  </div>
-
-                  <div className="review-detail">
-                    <span>
-                      Validation
-                    </span>
-
-                    <strong>
-                      {
-                        review.validationPassed
-                      }
-                      /
-                      {
-                        review.validationTotal
-                      }
-                    </strong>
-                  </div>
-
-                  <button
-                    className="review-button"
-                    onClick={() => {
-                      window.history.pushState(
-                        {
-                          page:
-                            "review-detail"
-                        },
-                        "",
-                        window.location.pathname
-                      );
-
-                      setSelected(
-                        review
-                      );
-                    }}
-                  >
-                    Review
-                    <ArrowRight
-                      size={14}
-                    />
-                  </button>
-                </div>
-              )
-            )}
-          </div>
+          <CurrentReviewCard
+            review={reviews[0]}
+            onReview={() => {
+              window.history.pushState(
+                { page: "review-detail" },
+                "",
+                window.location.pathname
+              );
+              setSelected(reviews[0]);
+            }}
+            onResolve={resolveReview}
+          />
         )}
       </section>
 
@@ -1070,6 +983,89 @@ function ReviewQueue() {
           </p>
         </div>
       </section>
+
+      {history.length > 0 && (
+        <section className="panel review-history-panel">
+          <div className="panel-head">
+            <div>
+              <p className="eyebrow">PERSISTENT RECORD</p>
+              <h3>Review History</h3>
+            </div>
+          </div>
+
+          <div className="review-history-list">
+            {history.map((record) => (
+              <div className="review-history-card" key={record._id}>
+                <div>
+                  <small>DOCUMENT</small>
+                  <strong>{record.filename}</strong>
+                </div>
+                <div>
+                  <small>DECISION</small>
+                  <span className={`history-decision ${decisionClass(record.decision)}`}>
+                    {formatDecision(record.decision)}
+                  </span>
+                </div>
+                <div>
+                  <small>RESOLVED</small>
+                  <strong>{formatTimestamp(record.updatedAt || record.processedAt)}</strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function CurrentReviewCard({ review, onReview, onResolve }) {
+  const summary = getReviewSummary(review);
+
+  return (
+    <article className="current-review-card">
+      <div className="current-review-header">
+        <div className="review-file">
+          <div className="review-icon"><FileText size={20} /></div>
+          <div>
+            <span>Current Document</span>
+            <strong>{review.filename}</strong>
+            <small>Analysis complete — human decision required</small>
+          </div>
+        </div>
+        <span className="analysis-status">ANALYZED</span>
+      </div>
+
+      <div className="finding-cards">
+        <FindingCard label="Critical Issues" value={summary.critical} tone="critical" />
+        <FindingCard label="Warnings" value={summary.warnings} tone="warning" />
+        <FindingCard label="Missing Fields" value={summary.missing} tone="info" />
+      </div>
+
+      <div className="suggested-decision">
+        <div>
+          <small>SUGGESTED DECISION</small>
+          <strong>Manual Review Required</strong>
+        </div>
+        <button className="review-button" onClick={onReview}>
+          Open Analysis <ArrowRight size={14} />
+        </button>
+      </div>
+
+      <div className="review-actions current-review-actions">
+        <button className="approve-button" onClick={() => onResolve(review._id, "APPROVE")}>Approve</button>
+        <button className="clarification-button" onClick={() => onResolve(review._id, "REQUEST_CLARIFICATION")}>Request Clarification</button>
+        <button className="reject-button" onClick={() => onResolve(review._id, "REJECT")}>Reject</button>
+      </div>
+    </article>
+  );
+}
+
+function FindingCard({ label, value, tone }) {
+  return (
+    <div className={`finding-card ${tone}`}>
+      <strong>{value}</strong>
+      <span>{label}</span>
     </div>
   );
 }
@@ -1491,6 +1487,18 @@ function DocumentDetail({
               </button>
 
               <button
+                className="clarification-button"
+                onClick={() =>
+                  onResolve(
+                    detail._id,
+                    "REQUEST_CLARIFICATION"
+                  )
+                }
+              >
+                Request Clarification
+              </button>
+
+              <button
                 className="approve-button"
                 onClick={() =>
                   onResolve(
@@ -1705,6 +1713,167 @@ function formatKey(key) {
       (s) =>
         s.toUpperCase()
     );
+}
+
+function getReviewSummary(review) {
+  const fields = review.fields || {};
+  const checks = review.validationChecks || {};
+  const failed = Object.entries(checks).filter(([, passed]) => !passed);
+  const missing = failed.filter(([key]) => !fields[key]).length;
+
+  return {
+    critical: failed.length - missing,
+    warnings: review.confidence < 90 ? 1 : 0,
+    missing
+  };
+}
+
+function getAiFindings(detail) {
+  const text = detail.extractedText || "";
+  const fields = detail.fields || {};
+  const checks = detail.validation?.checks || {};
+  const findings = [];
+  const missingFields = Object.entries(checks)
+    .filter(([key, passed]) => !passed && !fields[key])
+    .map(([key]) => formatKey(key));
+
+  if (missingFields.length > 0) {
+    findings.push({
+      title: "Missing mandatory fields",
+      description: `The following required fields were not detected: ${missingFields.join(", ")}.`,
+      severity: "critical",
+      action: "Request a complete document before approval."
+    });
+  }
+
+  const dates = [
+    ...new Set(text.match(/\b\d{2}[-/]\d{2}[-/]\d{4}\b/g) || [])
+  ];
+
+  if (dates.length > 1) {
+    findings.push({
+      title: "Conflicting dates",
+      description: `Multiple document dates were detected: ${dates.join(", ")}.`,
+      severity: "critical",
+      action: "Verify which date governs the agreement."
+    });
+  }
+
+  const amounts = [
+    ...new Set(
+      [...text.matchAll(/(?:loan amount|amount)\s*:\s*[₹$]?\s*([\d,]+)/gi)]
+        .map((match) => match[1])
+    )
+  ];
+
+  if (amounts.length > 1) {
+    findings.push({
+      title: "Conflicting values",
+      description: `Multiple labeled amounts were detected: ${amounts.join(", ")}.`,
+      severity: "critical",
+      action: "Confirm the correct amount with the document owner."
+    });
+  }
+
+  if (/auto[-\s]?renew(?:al)?|automatically renew/i.test(text)) {
+    findings.push({
+      title: "Auto-renewal clause",
+      description: "The document appears to contain an automatic renewal condition.",
+      severity: "warning",
+      action: "Confirm the renewal notice period and owner approval."
+    });
+  }
+
+  if (/unlimited liability|high liability|liability.{0,40}(?:unlimited|high)/i.test(text)) {
+    findings.push({
+      title: "High liability clause",
+      description: "Potentially high or unlimited liability language was detected.",
+      severity: "warning",
+      action: "Escalate the clause for legal or risk review."
+    });
+  }
+
+  if (/(?:missing|required|pending)\s+(?:attachments?|annexures?)/i.test(text)) {
+    findings.push({
+      title: "Missing attachments",
+      description: "The document indicates that an attachment or annexure is missing or pending.",
+      severity: "warning",
+      action: "Collect and validate the referenced attachment."
+    });
+  }
+
+  if (/payment terms|net\s+\d+|payment due/i.test(text)) {
+    findings.push({
+      title: "Payment terms detected",
+      description: "Payment timing or terms were identified in the document.",
+      severity: "info",
+      action: "Confirm the terms align with the commercial record."
+    });
+  }
+
+  if (/contract duration|contract term|duration\s*:|term\s*:/i.test(text)) {
+    findings.push({
+      title: "Contract duration identified",
+      description: "A contract duration or term was identified in the document.",
+      severity: "info",
+      action: "Record the effective and expiry dates."
+    });
+  }
+
+  return findings;
+}
+
+function getFindingRecommendation(findings) {
+  const criticalCount = findings.filter(
+    (finding) => finding.severity === "critical"
+  ).length;
+  const warningCount = findings.filter(
+    (finding) => finding.severity === "warning"
+  ).length;
+
+  if (criticalCount > 0) {
+    return {
+      decision: "Manual Review Required",
+      reason: "Critical findings need a human decision before this document can proceed.",
+      tone: "critical"
+    };
+  }
+
+  if (warningCount > 0) {
+    return {
+      decision: "Review Recommended",
+      reason: "Warnings were detected; review the highlighted clauses before approval.",
+      tone: "warning"
+    };
+  }
+
+  return {
+    decision: "Ready for Approval",
+    reason: "No critical findings or warnings were detected in the available document text.",
+    tone: "approved"
+  };
+}
+
+function isResolvedReview(decision) {
+  return [
+    "HUMAN-APPROVED",
+    "HUMAN-REJECTED",
+    "CLARIFICATION REQUESTED"
+  ].includes(decision);
+}
+
+function decisionClass(decision) {
+  if (decision === "HUMAN-APPROVED") return "approved";
+  if (decision === "HUMAN-REJECTED") return "critical";
+  return "warning";
+}
+
+function formatDecision(decision) {
+  return decision.replace("HUMAN-", "").replaceAll("-", " ");
+}
+
+function formatTimestamp(timestamp) {
+  return new Date(timestamp).toLocaleString();
 }
 
 export default App;

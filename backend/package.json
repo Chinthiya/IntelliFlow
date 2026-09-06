@@ -10,10 +10,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.8",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "mongoose": "^9.9.2",
     "multer": "^2.2.0",
+    "pdfjs-dist": "^6.2.108",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
